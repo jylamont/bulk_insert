@@ -1,6 +1,6 @@
 # BulkInsert
 
-Quick and dirty mass-insert with ActiveRecord and PostgreSQL.
+Quick and dirty mass-insert with ActiveRecord and PostgreSQL. This gem assumes that all data being inserted has already been validated, and that table and column names have been checked for SQL injection vulnerabilities.
 
 ## Installation
 
@@ -18,16 +18,18 @@ Or install it yourself as:
 
 ## Usage
 
+```ruby
 BulkInsert.new(table_name, [*column_names]).insert([*rows])
+```
 
 For example, to insert 10 comments into your database you can use the following...
 
+```ruby
 BulkInsert.new("comments", ["id", "author_id", "text", "created_at"]).insert([
   {"id" => 1, "author_id" => 1, "text" => "Hello world!", "created_at" => "now"},
   ...
 ])
-
-Note: This gem assumes that all data being inserted has already been validated.
+```
 
 ## Contributing
 
