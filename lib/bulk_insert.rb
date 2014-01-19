@@ -3,8 +3,7 @@ require "bulk_insert/version"
 
 module BulkInsert
   class Handler
-    attr_accessor :table_name, :return_value, :uses_transaction
-    attr_reader :column_names
+    attr_accessor :table_name, :column_names, :return_value, :uses_transaction
 
     def self.with_transaction(table_name, column_names, return_value = "*")
       new(table_name, column_names, return_value).tap do |handler|
@@ -17,19 +16,8 @@ module BulkInsert
       raise "column_names must be present" if column_names.nil? || column_names.empty?
 
       self.table_name = table_name
-      self.column_names = column_names
+      self.column_names = Array(column_names)
       self.return_value = return_value
-    end
-
-    def column_names=(value)
-      @column_names = Array(value)
-      @column_names_lookup = {}
-
-      @column_names.each_with_index do |name, i|
-        @column_names_lookup[name] = i
-      end
-
-      @column_names
     end
 
     def insert(rows)
@@ -52,8 +40,8 @@ module BulkInsert
       end
 
       rows.map do |row|
-        array = [@cached_value_sql] + @column_names.map { |n| row[n] }
-        ActiveRecord::Base.send(:sanitize_sql_array, array)
+        values = @column_names.map { |n| row[n] }
+        ActiveRecord::Base.send(:sanitize_sql_array, [@cached_value_sql, *values])
       end.join(', ')
     end
 
@@ -62,12 +50,11 @@ module BulkInsert
     end
 
     def perform_sql_in_transaction(sql)
-      r = nil
+      stmt_result = nil
       ActiveRecord::Base.transaction do
-        r = ActiveRecord::Base.connection.execute(sql).to_a
+        stmt_result = ActiveRecord::Base.connection.execute(sql).to_a
       end
-
-      r
+      stmt_result
     end
   end
 end
