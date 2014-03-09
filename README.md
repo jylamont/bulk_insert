@@ -19,13 +19,13 @@ Or install it yourself as:
 ## Usage
 
 ```ruby
-BulkInsert.new(table_name, [*column_names]).insert([*rows])
+BulkInsert::Handler.new(table_name, [*column_names]).insert([*rows])
 ```
 
 For example, to insert 10 comments into your database you can use the following...
 
 ```ruby
-BulkInsert.new("comments", ["id", "author_id", "text", "created_at"]).insert([
+BulkInsert::Handler.new("comments", ["id", "author_id", "text", "created_at"]).insert([
   {"id" => 1, "author_id" => 1, "text" => "Hello world!", "created_at" => "now"},
   ...
 ])
