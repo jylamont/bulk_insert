@@ -4,7 +4,7 @@ describe BulkInsert::Handler do
   it "should accept a table name, column names, and a return value" do
     subject = BulkInsert::Handler.new("test_name", ["id", "name", "created_at"], "id")
     subject.table_name.should == "test_name"
-    subject.column_names.should == [:id, :name, :created_at]
+    subject.column_names.should == ["id", "name", "created_at"]
     subject.return_value.should == "id"
   end
 
@@ -24,8 +24,27 @@ describe BulkInsert::Handler do
 
       expected_sql = "INSERT INTO employees (id, name, hero, created_at) VALUES (1, 'James', 't', 'now'), (2, 'Chris', 'f', 'now') RETURNING *"
       subject.should_receive(:perform_sql).with(expected_sql)
-
       subject.insert([{"id" => 1, "name" => "James", "hero" => true, "created_at" => "now"}, {"id" => 2, "name" => "Chris", "hero" => false, "created_at" => "now"}])
+    end
+
+    it "should properly handle nil and false values" do
+      expected_sql = "INSERT INTO tests (bool) VALUES ('t'), ('f'), (NULL) RETURNING *"
+
+      subject = BulkInsert::Handler.new("tests", ["bool"])
+      subject.should_receive(:perform_sql).with(expected_sql)
+      subject.insert([{"bool" => true}, {"bool" => false}, {"bool" => nil}])
+
+      subject = BulkInsert::Handler.new("tests", [:bool])
+      subject.should_receive(:perform_sql).with(expected_sql)
+      subject.insert([{"bool" => true}, {"bool" => false}, {"bool" => nil}])
+
+      subject = BulkInsert::Handler.new("tests", ["bool"])
+      subject.should_receive(:perform_sql).with(expected_sql)
+      subject.insert([{bool: true}, {bool: false}, {bool: nil}])
+
+      subject = BulkInsert::Handler.new("tests", [:bool])
+      subject.should_receive(:perform_sql).with(expected_sql)
+      subject.insert([{bool: true}, {bool: false}, {bool: nil}])
     end
 
     it "should also work with symbol column names" do

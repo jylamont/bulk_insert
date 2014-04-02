@@ -16,7 +16,7 @@ module BulkInsert
       raise "column_names must be present" if column_names.nil? || column_names.empty?
 
       self.table_name = table_name
-      self.column_names = Array(column_names).map(&:to_sym)
+      self.column_names = Array(column_names).map(&:to_s)
       self.return_value = return_value
     end
 
@@ -29,22 +29,17 @@ module BulkInsert
 
     private
     def generate_sql(rows)
-      column_names_sql = self.column_names.map(&:to_s).join(', ')
-      column_names_sql = "(#{column_names_sql})"
-      values_sql       = generate_values_sql(rows)
+      values_sql = generate_values_sql(rows)
 
+      column_names_sql = "(#{self.column_names.join(', ')})"
       %(INSERT INTO #{self.table_name} #{column_names_sql} VALUES #{values_sql} RETURNING #{self.return_value})
     end
 
     def generate_values_sql(rows)
-      @cached_value_sql ||= begin
-        t = @column_names.map { "?" }.join(", ")
-        "(#{t})"
-      end
-
       rows.map do |row|
-        values = @column_names.map { |n| row[n] || row[n.to_s] }
-        ActiveRecord::Base.send(:sanitize_sql_array, [@cached_value_sql, *values])
+        row = Hash[row.map{ |k, v| [k.to_s, v] }]
+        values = @column_names.map { |n| row[n] }
+        ActiveRecord::Base.send(:sanitize_sql_array, [cached_value_sql, *values])
       end.join(', ')
     end
 
@@ -58,6 +53,13 @@ module BulkInsert
         stmt_result = ActiveRecord::Base.connection.execute(sql).to_a
       end
       stmt_result
+    end
+
+    def cached_value_sql
+      @cached_value_sql ||= begin
+        t = @column_names.map { "?" }.join(", ")
+        "(#{t})"
+      end
     end
   end
 end
