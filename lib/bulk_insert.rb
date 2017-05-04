@@ -40,7 +40,6 @@ module BulkInsert
       rows.map do |row|
         row = Hash[row.map{ |k, v| [k.to_s, v] }]
         values = @column_names.map { |n| row[n] }
-        connection.sanitize_sql_array([cached_value_sql, *values])
         connection_source.send(:sanitize_sql_array, [cached_value_sql, *values])
       end.join(', ')
     end
