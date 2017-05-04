@@ -3,7 +3,7 @@ require "bulk_insert/version"
 
 module BulkInsert
   class Handler
-    attr_accessor :table_name, :column_names, :return_value, :uses_transaction
+    attr_accessor :table_name, :column_names, :return_value, :uses_transaction, :connection_source
 
     def self.with_transaction(table_name, column_names, return_value = "*")
       new(table_name, column_names, return_value).tap do |handler|
@@ -18,6 +18,7 @@ module BulkInsert
       self.table_name = table_name
       self.column_names = Array(column_names).map(&:to_s)
       self.return_value = return_value
+      self.connection_source = ActiveRecord::Base
     end
 
     def insert(rows)
@@ -39,18 +40,19 @@ module BulkInsert
       rows.map do |row|
         row = Hash[row.map{ |k, v| [k.to_s, v] }]
         values = @column_names.map { |n| row[n] }
-        ActiveRecord::Base.send(:sanitize_sql_array, [cached_value_sql, *values])
+        connection.sanitize_sql_array([cached_value_sql, *values])
+        connection_source.send(:sanitize_sql_array, [cached_value_sql, *values])
       end.join(', ')
     end
 
     def perform_sql(sql)
-      ActiveRecord::Base.connection.execute(sql).to_a
+      connection_source.connection.execute(sql).to_a
     end
 
     def perform_sql_in_transaction(sql)
       stmt_result = nil
-      ActiveRecord::Base.transaction do
-        stmt_result = ActiveRecord::Base.connection.execute(sql).to_a
+      connection_source.transaction do
+        stmt_result = connection_source.connection.execute(sql).to_a
       end
       stmt_result
     end
